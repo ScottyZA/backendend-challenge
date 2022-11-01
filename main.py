@@ -1,11 +1,15 @@
-from fastapi import FastAPI
+import validators
+from fastapi import FastAPI, HTTPException
+from url_shortener.schemas import SourceURL
 
 
 app = FastAPI()
 
 @app.post("/url")
-async def post_url():
+async def post_url(url: SourceURL):
     '''Receive a URL and return a unique short-form URL'''
+    if not validators.url(url.source_url):
+        raise HTTPException(status_code=400, detail="Provided URL is not valid")
     return {"short_url": "https://tier.app/abcd1234"}
 
 
