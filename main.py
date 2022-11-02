@@ -1,16 +1,52 @@
 import validators
-from fastapi import FastAPI, HTTPException
-from url_shortener.schemas import SourceURL
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+from url_shortener import models, schemas
+from url_shortener.utils import generate_short_url
+from services.database import SessionLocal, engine
+from services import crud
 
 
 app = FastAPI()
+# TODO: lock down CORS policy
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.post("/url")
-async def post_url(url: SourceURL):
+models.Base.metadata.create_all(bind=engine)
+
+
+def get_db():
+    ''''DB Session. Use thoughout the request'''
+    database = SessionLocal()
+    try:
+        yield database
+    finally:
+        database.close()
+
+
+@app.post("/url", response_model=schemas.URLInfo)
+async def post_url(
+    url: schemas.SourceURL,
+    database: Session = Depends(get_db)
+):
     '''Receive a URL and return a unique short-form URL'''
     if not validators.url(url.source_url):
-        raise HTTPException(status_code=400, detail="Provided URL is not valid")
-    return {"short_url": "https://tier.app/abcd1234"}
+        raise HTTPException(
+            status_code=400,
+            detail="Provided URL is not valid"
+        )
+
+    database_url = crud.create_short_url(database=database, source_url=url)
+
+    database_url.short_url = generate_short_url(database_url.short_url_key)
+
+    return database_url
 
 
 @app.get("/{short_url_key}")
