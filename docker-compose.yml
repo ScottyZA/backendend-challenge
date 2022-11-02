@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    volumes:
+      - .:/usr/app/
+    environment:
+      - database_url=postgresql://tier:tier@db:5432/url_api
+    ports:
+      - 5000:5000
+    depends_on:
+      - db
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=tier
+      - POSTGRES_PASSWORD=tier
+      - POSTGRES_DB=url_api
+
+volumes:
+  postgres_data:
