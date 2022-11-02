@@ -49,7 +49,17 @@ async def post_url(
     return database_url
 
 
-@app.get("/{short_url_key}")
-async def get_url():
+@app.get("/{short_url_key}", response_model=schemas.SourceURL)
+async def get_url(
+    short_url_key: str,
+    database: Session = Depends(get_db)
+):
     '''Receive a short URL and return the original long URL'''
-    return {"source_url": "https://example.com"}
+
+    database_url = crud.get_url_data_by_key(database, short_url_key)
+
+    if database_url:
+        return database_url
+    else:
+        message = f"Source URL for '{short_url_key}' key not found"
+        raise HTTPException(status_code=404, detail=message)
